@@ -1,0 +1,12 @@
+/* Base page for every wallpaper: pure black, full screen, no scrollbars. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+canvas {
+  display: block;
+}

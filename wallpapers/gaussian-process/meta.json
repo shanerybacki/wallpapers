@@ -1,0 +1,10 @@
+{
+  "title": "Gaussian Process",
+  "description": "A flowing stream of Gaussian process draws. Once the screen fills with prior draws, a hidden function is drawn in, points are observed on it one by one and the draws bend through them. Then it fades to black and starts again in new colors.",
+  "category": "statistics",
+  "tags": ["gaussian-process", "bayesian", "probability"],
+  "params": {
+    "samples": "How many draws are on screen at once (0–120, default 40)",
+    "lengthscale": "Kernel lengthscale; higher means smoother curves (0.3–5, default 1.0)"
+  }
+}
