@@ -3,7 +3,7 @@ import { smoothstep } from '../../shared/clock.js';
 import { DOMAIN, createSampler, createScene, envelope, episodeAt, palette } from './scene.js';
 
 const GRID = 180;
-const DRAW_ALPHA = 0.25; // per line; overlaps add up and glow
+const DRAW_ALPHA = 0.32; // per line; overlaps add up and glow
 
 run({
   schema: {
@@ -54,42 +54,44 @@ run({
     ctx.globalCompositeOperation = 'source-over';
 
     // The true function, drawn in left to right with a glowing pen tip. It
-    // dims while points are on it so the draws converging on it stand out,
-    // and it "breathes" slowly.
+    // dims slightly while points are on it, and "breathes": its width swells
+    // and narrows slowly while its opacity stays the same.
     const obs = scene.observations(t);
     const progress = scene.truthProgress(t);
     if (progress > 0) {
       const observed = obs.reduce((sum, o) => sum + o.weight, 0) / scene.options.observations;
-      ctx.strokeStyle = oled.color(...colors.truth, (0.6 - 0.25 * observed) * breath(t, 0));
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = oled.color(...colors.truth, 0.95 - 0.1 * observed);
+      ctx.lineWidth = TRUTH_WIDTH * breath(t, 0);
+      ctx.lineCap = 'round';
       const tip = strokePath(ctx, px, sampler.truth(t), toY, progress);
       if (progress < 1) glowDot(ctx, oled, colors.truth, tip.x, tip.y, 1);
     }
 
     // Observed points: each fades in gently, with two soft rings rippling out
-    // as it arrives, then breathes slightly out of step with its neighbors.
+    // as it arrives, then breathes (in size) slightly out of step with its neighbors.
     for (const o of obs) {
       const x = toX(o.x);
       const y = toY(o.y);
       if (o.age < EVENT.duration) observationRings(ctx, oled, colors.truth, x, y, o.age);
-      const b = breath(t, o.x * BREATH.spread);
-      glowDot(ctx, oled, colors.truth, x, y, o.weight * b, 1 + BREATH.swell * (b - 1 + BREATH.depth) / BREATH.depth);
+      glowDot(ctx, oled, colors.truth, x, y, o.weight, breath(t, o.x * BREATH.spread));
     }
   },
 });
 
-// A slow "breath" for the observed function and points: brightness eases
-// between (1 - depth) and 1 every `period` seconds. Points are phase-shifted
-// by their position, so the breathing ripples gently along the curve.
+const TRUTH_WIDTH = 2.5; // px, the true function's line at rest
+
+// A slow "breath" for the observed function and points: their size (line
+// width, dot radius) eases between (1 - amount) and (1 + amount) times normal
+// every `period` seconds, with opacity unchanged. Points are phase-shifted by
+// position, so the breathing ripples gently along the curve.
 const BREATH = {
   period: 6,
-  depth: 0.25,
+  amount: 0.25,
   spread: 0.6, // phase shift per unit of x (the domain is 10 wide)
-  swell: 0.25, // a point's glow grows by up to this fraction at full breath
 };
 
 function breath(t, phase) {
-  return 1 - BREATH.depth * (0.5 + 0.5 * Math.cos((2 * Math.PI * t) / BREATH.period + phase));
+  return 1 + BREATH.amount * Math.sin((2 * Math.PI * t) / BREATH.period + phase);
 }
 
 // The arrival of a new observation: two soft rings, nothing else. Kept
@@ -139,13 +141,13 @@ function strokePath(ctx, px, values, toY, to, from = 0) {
   return tip;
 }
 
-function glowDot(ctx, oled, rgb, x, y, alpha, glow = 1) {
-  ctx.fillStyle = oled.color(...rgb, 0.18 * alpha);
+function glowDot(ctx, oled, rgb, x, y, alpha, size = 1) {
+  ctx.fillStyle = oled.color(...rgb, 0.24 * alpha);
   ctx.beginPath();
-  ctx.arc(x, y, 10 * glow, 0, 2 * Math.PI);
+  ctx.arc(x, y, 10 * size, 0, 2 * Math.PI);
   ctx.fill();
   ctx.fillStyle = oled.color(...rgb, alpha);
   ctx.beginPath();
-  ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+  ctx.arc(x, y, 3.5 * size, 0, 2 * Math.PI);
   ctx.fill();
 }

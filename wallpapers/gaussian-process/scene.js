@@ -66,8 +66,8 @@ export const TIMING = {
 export const PALETTE = {
   startHue: 264, // blue draws, amber truth for episode 0
   step: 90,
-  draw: { lightness: 0.66, chroma: 0.17 },
-  truth: { lightness: 0.8, chroma: 0.15 },
+  draw: { lightness: 0.7, chroma: 0.17 },
+  truth: { lightness: 0.84, chroma: 0.15 },
 };
 
 export function episodeAt(t) {

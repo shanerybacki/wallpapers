@@ -60,7 +60,9 @@ One sampling process ("episode") at a time, never overlapping. Everything is in 
 - **19 s onward:** 8 points appear one at a time, 1 minute apart (19, 79, … 439 s). Points are never removed.
 - **Points fade in slowly** (`pointFade`, 2.5 s); the owner asked for them to appear "much slower".
 - **Observation event:** just two soft rings rippling out from the new point (about 4.6 s), and the dot fades in gently. The owner asked for it to be much less dramatic: no vertical beam, no bloom, no flash. Settings are in `EVENT` in `main.js`.
-- **Breathing:** the true function and points pulse gently in brightness (6 s period, ±25%), and points' glow swells slightly. Points are phase-shifted by position so it ripples along the curve. Settings are in `BREATH` in `main.js`.
+- **True function line:** 2.5 px at rest and nearly opaque (95%, dimming only slightly as points arrive); the owner wanted it thicker and less transparent.
+- **Brightness:** the owner asked for everything slightly brighter. Draw lines are 32% opacity each, the palette lightness is 0.70 for draws and 0.84 for truth/points, and the point glow is 24%. The arrival rings were left understated.
+- **Breathing** means size, not brightness: the true function's line width and the points' size swell and narrow by ±25% over a 6 s period, with opacity unchanged (the owner was explicit about this). Points are phase-shifted by position, so it ripples along the curve. Settings are in `BREATH` in `main.js`.
 - **Kernel:** RBF with lengthscale 1.0 (down from 1.2) for slightly wilder functions. The owner wants only a slight change here, so don't go much lower.
 - **439–597 s:** the final posterior lingers on all 8 points. **597–600 s:** fade to black (the 10-minute mark). **600–603 s:** pure black. Then the next process starts.
 - **Draws are frozen.** Each draw is sampled once, from the posterior given the points observed at its birth (Matheron's rule in `createSampler`), and never changes shape. The owner prefers this to morphing existing draws.
