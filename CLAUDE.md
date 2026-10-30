@@ -54,14 +54,15 @@ Then add it to the table in `README.md` and the list in `index.html`. Add tests 
 
 ## Gaussian process wallpaper
 
-One sampling process ("episode") at a time, never overlapping. Everything is in `wallpapers/gaussian-process/scene.js`, and timings live in `TIMING`. Each process is on screen for exactly 20 minutes, then 3 s of black (1203 s in all):
+One sampling process ("episode") at a time, never overlapping. Everything is in `wallpapers/gaussian-process/scene.js`, and timings live in `TIMING`. Each process is on screen for exactly 10 minutes, then 3 s of black (603 s in all):
 - **0–10.2 s:** prior draws stream in until a full set (`samples`, default 40) is on screen.
 - **10.2–18.2 s:** only then is the true function drawn in, slowly (8 s; the owner halved its speed).
-- **19 s onward:** 8 points appear one at a time, 2 minutes apart (19, 139, … 859 s). Points are never removed.
+- **19 s onward:** 8 points appear one at a time, 1 minute apart (19, 79, … 439 s). Points are never removed.
 - **Points fade in slowly** (`pointFade`, 2.5 s); the owner asked for them to appear "much slower".
 - **Observation event:** just two soft rings rippling out from the new point (about 4.6 s), and the dot fades in gently. The owner asked for it to be much less dramatic: no vertical beam, no bloom, no flash. Settings are in `EVENT` in `main.js`.
+- **Breathing:** the true function and points pulse gently in brightness (6 s period, ±25%), and points' glow swells slightly. Points are phase-shifted by position so it ripples along the curve. Settings are in `BREATH` in `main.js`.
 - **Kernel:** RBF with lengthscale 1.0 (down from 1.2) for slightly wilder functions. The owner wants only a slight change here, so don't go much lower.
-- **859–1197 s:** the final posterior lingers. **1197–1200 s:** fade to black (the 20-minute mark). **1200–1203 s:** pure black. Then the next process starts.
+- **439–597 s:** the final posterior lingers on all 8 points. **597–600 s:** fade to black (the 10-minute mark). **600–603 s:** pure black. Then the next process starts.
 - **Draws are frozen.** Each draw is sampled once, from the posterior given the points observed at its birth (Matheron's rule in `createSampler`), and never changes shape. The owner prefers this to morphing existing draws.
 - **Draws fade; they don't erase or chase.** The owner tried a left-to-right erase and a "chase" (each new draw pushing an old one out) and much preferred fading. Each draw is drawn in left to right (`sweep`, 6.2 s), stays fully visible for its own random time (`hold`, 1–3 s), then fades (`fade`, 2 s). One is born every `life / samples` s, which keeps about `samples` on screen. The owner found 2 s lives too fast and an 11.5 s sweep too slow.
 - **No "open water."** When a new point arrives, outdated draws are not cut short; they fade on their own schedules while fresh posterior draws keep arriving at the same rate. Cutting them short made new draws cross empty space, which the owner disliked ("treading on open waters"). The random holds stagger the fades so the picture never visibly "updates" all at once. A test checks that coverage across the screen never dips after a point.
@@ -69,6 +70,10 @@ One sampling process ("episode") at a time, never overlapping. Everything is in 
 - Functions are always drawn left to right. Only sampled functions and points are shown: the owner explicitly removed the mean line and the ±2σ band.
 
 To preview a specific moment, use a scratch HTML page that overrides `Date.now` before importing `main.js`.
+
+## Commits
+
+Don't add a `Co-Authored-By: Claude` trailer (or any other AI attribution) to commit messages or PR descriptions. The owner doesn't want Claude associated with commits.
 
 ## Status
 

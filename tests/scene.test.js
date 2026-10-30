@@ -98,11 +98,15 @@ test('about `samples` draws are on screen, each drawn in then faded on its own s
 
 test('fades are staggered at random, not in birth order', () => {
   const scene = createScene('stagger', { samples: 40 });
-  const draws = scene.draws(E0 + 100);
-  const fading = draws.filter((d) => d.alpha < 1).map((d) => d.k);
-  // Some draws are fading while an older one is still at full strength.
-  const oldestFull = Math.min(...draws.filter((d) => d.alpha === 1 && d.to === 1).map((d) => d.k));
-  assert.ok(fading.some((k) => k > oldestFull));
+  // Often (not necessarily at every instant) a draw is fading while an older one is still at full strength.
+  let outOfOrder = 0;
+  for (let i = 0; i < 40; i++) {
+    const draws = scene.draws(E0 + 30 + i * 2.3);
+    const fading = draws.filter((d) => d.alpha < 1).map((d) => d.k);
+    const oldestFull = Math.min(...draws.filter((d) => d.alpha === 1 && d.to === 1).map((d) => d.k));
+    if (fading.some((k) => k > oldestFull)) outOfOrder++;
+  }
+  assert.ok(outOfOrder >= 10, `only ${outOfOrder} of 40 moments showed out-of-order fades`);
 });
 
 // Total curve "ink" crossing a vertical line at x (each draw counts by its alpha).

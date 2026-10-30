@@ -51,13 +51,13 @@ export const TIMING = {
     life: 10.2, // average birth-to-gone time: sweep + mean hold + fade (sets the birth rate)
     maxLife: 11.2, // longest possible: sweep + max hold + fade
   },
-  episode: 1203, // one process: 20 minutes on screen, then the 3 s black gap
+  episode: 603, // one process: 10 minutes on screen, then the 3 s black gap
   truthIn: [10.2, 18.2], // drawn in once the screen has a full set of prior draws (one average life)
   observeStart: 19, // the first point appears
   firstBatch: 1, // how many points appear together at the start (1 = one at a time throughout)
-  pointGap: 120, // seconds between points appearing
+  pointGap: 60, // seconds between points appearing
   pointFade: 2.5, // how long a point takes to fade into view
-  fadeOut: [1197, 1200], // the final posterior lingers until here, fades to black, then stays black until the episode ends
+  fadeOut: [597, 600], // the final posterior lingers until here, fades to black, then stays black until the episode ends
 };
 
 // Colors, on the OKLCH color wheel. Within a process the draws and the true
