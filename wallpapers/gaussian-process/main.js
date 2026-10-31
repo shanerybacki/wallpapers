@@ -53,14 +53,14 @@ run({
     }
     ctx.globalCompositeOperation = 'source-over';
 
-    // The true function: a bold line with a soft glow beneath it, drawn in left
-    // to right with a glowing pen tip. It "breathes": its width (and its glow's)
-    // swells and narrows slowly while its opacity stays the same.
+    // The true function: a line with a soft glow beneath it, drawn in left to
+    // right with a glowing pen tip. It "breathes": its width (and its glow's)
+    // swells from its resting width up to double, while its opacity stays the same.
     const obs = scene.observations(t);
     const progress = scene.truthProgress(t);
     if (progress > 0) {
       const observed = obs.reduce((sum, o) => sum + o.weight, 0) / scene.options.observations;
-      const width = TRUTH.width * breath(t, 0);
+      const width = TRUTH.width * (1 + BREATH.lineGrowth * breath(t, 0));
       const truthPath = sampler.truth(t);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -79,31 +79,33 @@ run({
       const x = toX(o.x);
       const y = toY(o.y);
       if (o.age < EVENT.duration) observationRings(ctx, oled, colors.truth, x, y, o.age);
-      glowDot(ctx, oled, colors.truth, x, y, o.weight, POINT_SIZE * breath(t, o.x * BREATH.spread));
+      const b = breath(t, o.x * BREATH.spread);
+      glowDot(ctx, oled, colors.truth, x, y, o.weight, POINT_SIZE * (1 + BREATH.pointSwing * (2 * b - 1)));
     }
   },
 });
 
-// The true function's line, designed to stand out clearly from the draws.
+// The true function's line.
 const TRUTH = {
-  width: 4.5, // px at rest (before breathing)
-  glowWidth: 3.5, // the soft glow beneath it is this many times wider
-  glowAlpha: 0.14,
+  width: 1.15, // px at rest; breathing swells it up to double this
+  glowWidth: 3, // the soft glow beneath it is this many times wider
+  glowAlpha: 0.11,
 };
-const POINT_SIZE = 1.5; // observed points, scaled up to sit clearly on the bold line
+const POINT_SIZE = 1.15; // observed points, scaled up slightly to sit clearly on the line
 
-// A slow "breath" for the observed function and points: their size (line
-// width, dot radius) eases between (1 - amount) and (1 + amount) times normal
-// every `period` seconds, with opacity unchanged. Points are phase-shifted by
-// position, so the breathing ripples gently along the curve.
+// A slow "breath" for the observed function and points: their size changes,
+// their opacity doesn't. Points are phase-shifted by position, so the
+// breathing ripples gently along the curve.
 const BREATH = {
   period: 6,
-  amount: 0.3,
+  lineGrowth: 1, // the line swells from its resting width to (1 + lineGrowth)×, i.e. up to double
+  pointSwing: 0.3, // points vary by ±30% around their normal size
   spread: 0.6, // phase shift per unit of x (the domain is 10 wide)
 };
 
+// 0 → 1 → 0 smoothly over each period.
 function breath(t, phase) {
-  return 1 + BREATH.amount * Math.sin((2 * Math.PI * t) / BREATH.period + phase);
+  return 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / BREATH.period + phase);
 }
 
 // The arrival of a new observation: two soft rings, nothing else. Kept
