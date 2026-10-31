@@ -26,6 +26,7 @@ import {
   evalFeatures,
   featureMatrix,
   pathwiseUpdate,
+  predict,
   randomFourierFeatures,
   rbfKernel,
 } from './gp.js';
@@ -57,6 +58,9 @@ export const TIMING = {
   firstBatch: 1, // how many points appear together at the start (1 = one at a time throughout)
   pointGap: 60, // seconds between points appearing
   pointFade: 2.5, // how long a point takes to fade into view
+  // The posterior mean line morphs to include a new point over meanMorph[1]
+  // seconds, starting meanMorph[0] seconds before the point appears.
+  meanMorph: [0.6, 4],
   fadeOut: [597, 600], // the final posterior lingers until here, fades to black, then stays black until the episode ends
 };
 
@@ -211,6 +215,23 @@ export function createSampler(scene, xs) {
   const conds = new Map(); // "episode:n" → conditioning on the first n points
   let truthEpisode = null;
   let truth = null;
+  const zeros = new Float64Array(N);
+  const meanOut = new Float64Array(N);
+  const means = new Map(); // "episode:n" → posterior mean given the first n points
+
+  // Posterior mean on the grid given the first n points of an episode (cached).
+  function meanGiven(episode, n) {
+    if (n === 0) return zeros;
+    const key = `${episode}:${n}`;
+    let m = means.get(key);
+    if (!m) {
+      const c = conditioning(episode, n);
+      m = predict(c.cond, xs, c.Kx).mean;
+      means.set(key, m);
+      if (means.size > 16) means.delete(means.keys().next().value);
+    }
+    return m;
+  }
 
   // Conditioning on the first n points (in order of appearance) of an episode.
   function conditioning(episode, n) {
@@ -246,6 +267,31 @@ export function createSampler(scene, xs) {
   }
 
   return {
+    // The posterior mean on the grid. It is 0 (the prior mean) before any
+    // points. Around each new point it blends smoothly from the mean without
+    // that point to the mean with it, starting slightly before the point
+    // appears (TIMING.meanMorph).
+    mean(t) {
+      const { index, tau } = episodeAt(t);
+      const { obs } = scene.episodeData(index); // in order of appearance
+      const [lead, duration] = TIMING.meanMorph;
+      let n = 0; // points fully included
+      let blend = 0; // progress toward including point n
+      for (const ob of obs) {
+        const u = smootherstep((tau - (ob.appear - lead)) / duration);
+        if (u >= 1) n++;
+        else {
+          blend = u;
+          break;
+        }
+      }
+      const from = meanGiven(index, n);
+      if (blend <= 0) return from;
+      const to = meanGiven(index, n + 1);
+      for (let i = 0; i < N; i++) meanOut[i] = from[i] + blend * (to[i] - from[i]);
+      return meanOut;
+    },
+
     // The current true function on the grid.
     truth(t) {
       const { index } = episodeAt(t);
@@ -272,4 +318,10 @@ function shuffle(random, array) {
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
+}
+
+// 0 → 1 with zero slope and zero curvature at both ends: an extra-gentle ease.
+function smootherstep(u) {
+  const x = u <= 0 ? 0 : u >= 1 ? 1 : u;
+  return x * x * x * (x * (6 * x - 15) + 10);
 }

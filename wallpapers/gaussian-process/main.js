@@ -9,6 +9,9 @@ run({
   schema: {
     samples: { type: 'int', default: 40, min: 0, max: 120 },
     lengthscale: { type: 'number', default: 1.0, min: 0.3, max: 5 },
+    // Which bold line to show: the posterior mean (what a viewer can infer
+    // from the points) or the hidden true function the points come from.
+    line: { type: 'string', default: 'mean' },
   },
 
   setup({ params }) {
@@ -20,7 +23,13 @@ run({
     for (let i = 0; i < GRID; i++) {
       xs[i] = DOMAIN[0] + ((DOMAIN[1] - DOMAIN[0]) * i) / (GRID - 1);
     }
-    return { scene, xs, sampler: createSampler(scene, xs), px: new Float64Array(GRID) };
+    return {
+      scene,
+      xs,
+      sampler: createSampler(scene, xs),
+      px: new Float64Array(GRID),
+      showTruth: params.line === 'truth',
+    };
   },
 
   frame({ t, ctx, width, height, oled, state }) {
@@ -53,15 +62,16 @@ run({
     }
     ctx.globalCompositeOperation = 'source-over';
 
-    // The true function: a line with a soft glow beneath it, drawn in left to
-    // right with a glowing pen tip. It "breathes": its width (and its glow's)
-    // swells from its resting width up to double, while its opacity stays the same.
+    // The bold line: the posterior mean (default) or, with ?line=truth, the
+    // hidden true function. A soft glow beneath it; drawn in left to right with
+    // a glowing pen tip. It "breathes": its width (and its glow's) swells from
+    // its resting width up to double, while its opacity stays the same.
     const obs = scene.observations(t);
     const progress = scene.truthProgress(t);
     if (progress > 0) {
       const observed = obs.reduce((sum, o) => sum + o.weight, 0) / scene.options.observations;
       const width = TRUTH.width * (1 + BREATH.lineGrowth * breath(t, 0));
-      const truthPath = sampler.truth(t);
+      const truthPath = state.showTruth ? sampler.truth(t) : sampler.mean(t);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = oled.color(...colors.truth, TRUTH.glowAlpha);

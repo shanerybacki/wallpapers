@@ -235,3 +235,43 @@ test('observations report their age, which drives the arrival effect', () => {
   const [first] = scene.observations(E0 + TIMING.observeStart + 0.75);
   assert.ok(Math.abs(first.age - 0.75) < 1e-6);
 });
+
+test('the posterior mean is 0 before any points and passes through them once all are in', () => {
+  const scene = createScene('mean-line');
+  const sampler = createSampler(scene, grid);
+  assert.ok(sampler.mean(E0 + TIMING.observeStart - 1).every((v) => v === 0));
+  const t = E0 + LAST_ARRIVAL + TIMING.pointFade + 1;
+  const obs = scene.observations(t);
+  assert.equal(obs.length, M);
+  const atPoints = createSampler(scene, Float64Array.from(obs.map((o) => o.x))).mean(t);
+  obs.forEach((o, j) => assert.ok(Math.abs(atPoints[j] - o.y) < 0.02, `mean misses point ${j}`));
+});
+
+test('the posterior mean morphs smoothly toward each new point', () => {
+  const scene = createScene('mean-morph');
+  const sampler = createSampler(scene, grid);
+  const [lead, duration] = TIMING.meanMorph;
+  for (let n = 0; n < 3; n++) {
+    const arrival = TIMING.observeStart + n * TIMING.pointGap;
+    for (let dt = -lead - 0.5; dt <= duration; dt += 0.05) {
+      const a = Float64Array.from(sampler.mean(E0 + arrival + dt));
+      const b = sampler.mean(E0 + arrival + dt + 1 / 120); // one frame at 120 Hz
+      const maxStep = Math.max(...a.map((v, i) => Math.abs(v - b[i])));
+      assert.ok(maxStep < 0.05, `mean jumped ${maxStep.toFixed(3)} at ${dt.toFixed(2)} s after point ${n}`);
+    }
+  }
+});
+
+test('the posterior mean starts moving slightly before a new point appears', () => {
+  const scene = createScene('mean-early');
+  const sampler = createSampler(scene, grid);
+  const [lead, duration] = TIMING.meanMorph;
+  const arrival = TIMING.observeStart + TIMING.pointGap; // the second point
+  const settled = Float64Array.from(sampler.mean(E0 + arrival - lead - 0.1));
+  const early = Float64Array.from(sampler.mean(E0 + arrival - 0.05));
+  const done = Float64Array.from(sampler.mean(E0 + arrival - lead + duration));
+  const later = sampler.mean(E0 + arrival + 30);
+  const diff = (a, b) => Math.max(...a.map((v, i) => Math.abs(v - b[i])));
+  assert.ok(diff(early, settled) > 1e-4, 'mean had not started moving before the point appeared');
+  assert.ok(diff(done, later) < 1e-12, 'mean still moving after the morph should be complete');
+});
